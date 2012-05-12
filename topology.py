@@ -36,12 +36,14 @@ class NetworkTopologyTore(object):
         0.0
         >>> ntt.distance((1, 1), (1, 4))
         0.0
+        >>> ntt.distance((0, 0), (0, 1))
+        1.0
         """
         xx = abs(x - i)
-        xx = min(xx, self._width - xx)
+        xx = min(xx, self._height - xx)
 
         yy = abs(y - j)
-        yy = min(yy, self._height - yy)
+        yy = min(yy, self._width - yy)
 
         return math.sqrt(xx ** 2 + yy ** 2)
 
@@ -84,8 +86,13 @@ class NetworkTopologyTore(object):
         return results
 
 def main(args):
-    print >>sys.stderr, "No main defined for this module"
-    sys.exit(1)
+    print "Some doctesting..."
+    import doctest
+    i = doctest.testmod()
+
+    if (i.failed > 0):
+        return i.failed
+    print "Everything ok: %s tests" % i.attempted
 
 if __name__ == "__main__":
     main(sys.argv)

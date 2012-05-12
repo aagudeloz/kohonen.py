@@ -71,10 +71,6 @@ class NeuralTrainer(object):
         for d in dataset:
             winner = self.pick_nearest(d)
 
-            print "=" * 50
-            print "winner:", winner
-            print "neighbors:", self._topology.neighbors_of(winner, radius)
-
             # Thanks to the neighbors definition,
             # winner is now a simple special case :)
             winners = self._topology.neighbors_of(winner, radius)
@@ -83,9 +79,8 @@ class NeuralTrainer(object):
             for (winner, meaningful) in winners:
                 weights = self._network[winner]
                 weights += meaningful * learning_rate() * (numpy.array(d) - weights)
-                print "m: %s, l: %s, sub: %s" % (meaningful, learning_rate(),
-                                                  (numpy.array(d) - weights))
                 #TODO: remove this numpy.array
+            radius = radius_rate()
 
     def classify(self, dataset):
         return map(self.pick_nearest, dataset)
