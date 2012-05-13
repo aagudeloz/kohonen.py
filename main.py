@@ -19,6 +19,7 @@ def plot(results):
     fig = pl.figure()
 
     legend = [[], []] # [[color1, color2,...], [id1, id2,...]]
+    val_bottom = [0] * len(results) # The current height of the chart
 
     for (k, v) in results.items():
         img_id = k
@@ -26,12 +27,17 @@ def plot(results):
         values = v.values()
 
         color = colorsys.hsv_to_rgb(img_id / 10.0, 1, 0.5)
+        bar_bottom = [val_bottom[n] for n in neurons]
 
         subplot = fig.add_subplot(1, 1, 1)
-        sb = subplot.bar(neurons, values, align="center", facecolor=color)
+        sb = subplot.bar(neurons, values, align="center", facecolor=color, bottom=bar_bottom)
 
         legend[1].append(img_id)
         legend[0].append(sb[0])
+
+        # We move the bottom coordinate for the stacked bars
+        for i in xrange(len(neurons)):
+            val_bottom[neurons[i]] += values[i]
 
     subplot.legend(*legend) # lazy solution
     subplot.set_ylabel("matching count")
@@ -98,8 +104,8 @@ def main(args):
     print "Normalize the test set..."
 
     print "Start the classification..."
-    ids = train_set[1][:50]
-    ts = train_set[0][:50]
+    ids = train_set[1][:100]
+    ts = train_set[0][:100]
     results = nt.classify(ts)
     print "Finished..."
 
@@ -114,6 +120,11 @@ def main(args):
         img_idtoneurons[neuron] = img_idtoneurons.get(neuron, 0) + 1
 
     print "plot..."
+    print "=" * 10
+    print results
+    print "=" * 10
+    print plottable
+    print "=" * 10
     plot(plottable)
 
 if __name__ == "__main__":
