@@ -45,7 +45,7 @@ class NeuralTrainer(object):
 
         return dists.index(min(dists))
 
-    def train(self, dataset):
+    def train(self, dataset,update_fct=None):
         """
         Training:
             for each data, we pick the closest neuron (the winner)
@@ -57,28 +57,34 @@ class NeuralTrainer(object):
         radius = len(self._topology)
 
         # simulate FP's r/w closure, I'm still looking for a better solution
-        # TODO: move this definition outside
-        def learning_rate(current=[1]):
-            r = current[0]
-            current[0] /= 2.0
-            return r
+        # TODO: move these two definition outside
+        def learning_rate(current=[0]):
+            x = current[0]
+            current[0] += 1
+
+            return (1 / (1+ (x / 100.0) ** 3))
 
         def radius_rate(current=[len(self._topology)]):
             r = current[0]
-            current[0] /= 1.2
+            current[0] /= 1.1
             return r
 
         for d in dataset:
+            if update_fct is not None:
+                update_fct(self._network, self)
+
             winner = self.pick_nearest(d)
 
             # Thanks to the neighbors definition,
             # winner is now a simple special case :)
             winners = self._topology.neighbors_of(winner, radius)
 
+            l = learning_rate()
+
             # Adapt the winners
             for (winner, meaningful) in winners:
                 weights = self._network[winner]
-                weights += meaningful * learning_rate() * (numpy.array(d) - weights)
+                weights += (meaningful **2) * l * (numpy.array(d) - weights)
                 #TODO: remove this numpy.array
             radius = radius_rate()
 
