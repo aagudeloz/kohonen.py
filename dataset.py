@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 import sys
 import math
+import numpy
 
 # mnist manipulation
 mnist_get_image = lambda mset, data_id: mset[0][data_id]
@@ -29,15 +30,15 @@ def mnist_load(path="data/mnist.pk1.gz"):
     return train_set, valid_set, test_set
 
 # RMS computation
-rms = lambda s: math.sqrt(sum(map(lambda x: x ** 2, s)) / len(s))
+rms = lambda s: math.sqrt(numpy.sum(s ** 2) / float(s.size))
 def rms_normalize(dataset):
     k = rms(dataset)
-    return map(lambda x: x / k, dataset)
+    return dataset / k
 
-mean = lambda s: sum(s) / float(len(s))
+mean = lambda s: numpy.sum(s) / float(s.size)
 def mean_normalize(dataset):
     k = mean(dataset)
-    return map(lambda x: x - k, dataset)
+    return dataset - k
 
 def main(args):
     print >>sys.stderr, "No main defined for this module"
