@@ -31,7 +31,7 @@ def distance_euclidean(data, neuron):
     >>> distance_euclidean([0, 5], [0, 1])
     4.0
     """
-    return math.sqrt(sum(map(lambda x, y: (x - y) ** 2, data, neuron)))
+    return math.sqrt(numpy.sum(numpy.power((data - neuron), 2)))
 
 class NeuralTrainer(object):
     def __init__(self, network, topology, distance_function):
@@ -39,11 +39,20 @@ class NeuralTrainer(object):
         self._topology = topology
         self._distf = distance_function
 
-    def pick_nearest(self, data):
-        dfunc = lambda x: self._distf(x, data) # Sugar
-        dists = [dfunc(self._network[i]) for i in range(len(self._network))]
+    def pick_nearests(self, data):
+        return [self._distf(data, self._network[i]) for i in range(len(self._network))]
+
+    def pick_nearest(self, data, nth=0):
+        dists = [self._distf(data, self._network[i]) for i in range(len(self._network))]
+
+        while nth > 0:
+            dists.index(min(dists)) == float("inf")
+            nth -= 1
 
         return dists.index(min(dists))
+
+    def pick_match(self, data):
+        return [self._distf(data, self._network[i]) for i in range(len(self._network))]
 
     def train(self, dataset,update_fct=None):
         """
@@ -54,20 +63,22 @@ class NeuralTrainer(object):
             TODO: Adapt the neighbors
             TODO: "The conscience"
         """
-        radius = len(self._topology)
+        topo_radius = len(self._topology) * 0.5
+        dataset_len = float(len(dataset))
 
-        # simulate FP's r/w closure, I'm still looking for a better solution
-        # TODO: move these two definition outside
-        def learning_rate(current=[0]):
-            x = current[0]
-            current[0] += 1
+        phi = 0.3
+        k =  topo_radius * 1.4 * (1 / (phi * math.sqrt(math.pi * 2)))
 
-            return (1 / (1+ (x / 100.0) ** 3))
+        # TODO: parametrize this
+        learning_rate = lambda x : (1 - 0.74 * x) ** 2
+        radius_rate = lambda x : k * math.exp(-0.5 * ((x/phi) ** 2))
+        radius_rate = lambda x : topo_radius * ((1 - 0.74 * x) ** 2)
 
-        def radius_rate(current=[len(self._topology)]):
-            r = current[0]
-            current[0] /= 1.1
-            return r
+        x = 0
+        x_step = 1 / dataset_len
+
+        #last_winner = -1
+        #last_count = 0
 
         for d in dataset:
             if update_fct is not None:
@@ -77,19 +88,36 @@ class NeuralTrainer(object):
 
             # Thanks to the neighbors definition,
             # winner is now a simple special case :)
-            winners = self._topology.neighbors_of(winner, radius)
+            winners = self._topology.neighbors_of(winner, radius_rate(x))
 
-            l = learning_rate()
+            if len(winners) == 1:
+                break
+
+            l_rate = learning_rate(x)
+
+            print "[tick %s, %s winners]" % (round(x, 2), len(winners)),
 
             # Adapt the winners
             for (winner, meaningful) in winners:
                 weights = self._network[winner]
-                weights += (meaningful **2) * l * (numpy.array(d) - weights)
-                #TODO: remove this numpy.array
-            radius = radius_rate()
+                weights += meaningful * meaningful *  l_rate * (d - weights)
+
+            x += x_step
 
     def classify(self, dataset):
         return map(self.pick_nearest, dataset)
+
+    def identify(self, dataset, neuron_map):
+        results = []
+        for d in dataset:
+            vote = {}
+            matches = self.pick_match(d)
+            for i in range(len(matches)):
+                vote[neuron_map[i]] = vote.get(neuron_map[i], 0) + matches[i]
+            results.append(max(vote.items(), key=lambda x : x[1])[0])
+
+        return results
+
 
 def main(args):
     print >>sys.stderr, "No main defined for this module"
