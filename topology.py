@@ -67,8 +67,8 @@ class NetworkTopologyTore(object):
                     set([(0, 1.0), (1, 0.0), (3, 0.0), (2, 0.0), (6, 0.0)])
             True
         """
-        if (distance <= 0):
-            return set((node_id, 1.0))
+        if (distance <= 1):
+            return set([(node_id, 1.0)])
 
         # Get the x, y coordinates for the given node
         f = abs(self._matrix - node_id).argmin()
@@ -84,6 +84,9 @@ class NetworkTopologyTore(object):
                     results.add((self._matrix[i, j], 1 - (d / distance)))
 
         return results
+
+    def __str__(self):
+        return "Topology:\n" + str(self._matrix)
 
 def main(args):
     print "Some doctesting..."
