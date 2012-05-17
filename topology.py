@@ -76,12 +76,16 @@ class NetworkTopologyTore(object):
 
         results = set()
 
+        phi = 0.2
+        k =  (1 / (phi * math.sqrt(math.pi * 2)))
+        meaning = lambda x : k * math.exp(-0.5 * ((x/phi) ** 2))
+
         # Dummy search in the whole set
         for i in xrange(self._height):
             for j in xrange(self._width):
                 d = self.distance((x, y), (i, j))
                 if (d <= distance):
-                    results.add((self._matrix[i, j], 1 - (d / distance)))
+                    results.add((self._matrix[i, j], meaning(d / distance)))
 
         return results
 
