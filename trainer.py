@@ -64,34 +64,43 @@ class NeuralTrainer(object):
             TODO: "The conscience"
         """
         topo_radius = len(self._topology) * 0.5
-        dataset_len = float(len(dataset))
 
         phi = 0.3
         k =  topo_radius * 1.4 * (1 / (phi * math.sqrt(math.pi * 2)))
 
         # TODO: parametrize this
-        learning_rate = lambda x : (1 - 0.74 * x) ** 2
+        learning_rate = lambda x : ((1 - 1.1 * x) ** 2)
         radius_rate = lambda x : k * math.exp(-0.5 * ((x/phi) ** 2))
-        radius_rate = lambda x : topo_radius * ((1 - 0.74 * x) ** 2)
+        radius_rate = lambda x : (1 - 1 * x) * (topo_radius + 1)
 
         x = 0
-        x_step = 1 / dataset_len
+        x_step = 1.0 / len(dataset)
 
-        #last_winner = -1
-        #last_count = 0
+        last_winner = -1
+        last_count = 0
 
+        i = 0
         for d in dataset:
             if update_fct is not None:
                 update_fct(self._network, self)
 
             winner = self.pick_nearest(d)
 
+            if winner == last_winner:
+                last_count += 1
+
+            if last_count > 5:
+                winner = self.pick_nearest(d, 2)
+            else:
+                last_winner = winner
+                last_count = 0
+
             # Thanks to the neighbors definition,
             # winner is now a simple special case :)
             winners = self._topology.neighbors_of(winner, radius_rate(x))
 
-            if len(winners) == 1:
-                break
+            #if len(winners) == 1:
+            #    break
 
             l_rate = learning_rate(x)
 
@@ -103,6 +112,7 @@ class NeuralTrainer(object):
                 weights += meaningful * meaningful *  l_rate * (d - weights)
 
             x += x_step
+            i += 1
 
     def classify(self, dataset):
         return map(self.pick_nearest, dataset)

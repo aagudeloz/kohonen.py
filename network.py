@@ -9,7 +9,7 @@ class NeuralNetwork(object):
         self._size_network = size_network
         self._size_attr = size_attr
 
-        self._matrix = numpy.random.random((size_network, size_attr))
+        self._matrix = numpy.random.random((size_network, size_attr)) * 0.5
 
     def __getitem__(self, neuron_id):
         return self._matrix[neuron_id]

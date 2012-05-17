@@ -2,147 +2,154 @@
 # -*- coding: utf-8 -*-
 import sys
 import random
-from dataset import mnist_load, mnist_get_image, rms_normalize, mean_normalize
+from dataset import mnist_load, mnist_get_image
 from network import NeuralNetwork
 from topology import NetworkTopologyTore
-from trainer import NeuralTrainer, distance_scalar, distance_euclidean
-
-import pylab as pl
-import matplotlib as mpl
-import colorsys
-
-def plot(results):
-    """
-        Plot the results
-        @param results {numberA: { neuronX: 12, neuronY: 13, ...}, ...}
-    """
-    fig = pl.figure()
-
-    legend = [[], []] # [[color1, color2,...], [id1, id2,...]]
-    val_bottom = [0] * 11#len(results) # The current height of the chart
-
-    for (k, v) in results.items():
-        img_id = k
-        neurons = v.keys()
-        values = v.values()
-
-        color = colorsys.hsv_to_rgb(img_id / 10.0, 1, 0.5)
-        bar_bottom = [val_bottom[n] for n in neurons]
-
-        subplot = fig.add_subplot(1, 1, 1)
-        sb = subplot.bar(neurons, values, align="center", facecolor=color, bottom=bar_bottom)
-
-        legend[0].append(sb[0])
-        legend[1].append(img_id)
-
-        # We move the bottom coordinate for the stacked bars
-        for i in xrange(len(neurons)):
-            val_bottom[neurons[i]] += values[i]
-
-    subplot.legend(*legend) # lazy solution
-    subplot.set_ylabel("matching count")
-    subplot.set_title("Neurons match per number")
-
-    fig.savefig("result.png")
-#    pl.show()
-
-def plot_network(network, filepath):
-    print "oula"
-    f = pl.figure()
-
-    for i in xrange(len(network)):
-        s = f.add_subplot(5, 5, i + 1)
-        s.matshow(network[i].reshape(28, 28))
-        s.set_title("network %s" % i)
-        s.axis("off")
-    f.savefig(filepath)
+from trainer import NeuralTrainer, distance_euclidean
+import plot
 
 # Go!
 def main(args):
+    print "python main.py mnist_db_path valid_count test_count train_count network_width"
+
+    mnist_db_path = args[1]
+    valid_count = int(args[2])
+    test_count = int(args[3])
+    train_count = int(args[4])
+    network_width = int(args[5])
+
     random.seed(1001)
 
-    print "Some doctesting..."
-    import doctest
-    i = doctest.testmod()
+    # Init
+    # ====
 
-    if (i.failed > 0):
-        return i.failed
-    print "Everything ok: %s tests" % i.attempted
+    print "load the mnist db..."
+    train_set, valid_set, test_set = mnist_load(mnist_db_path)
 
-    def ignore():
-        nn = NeuralNetwork(2, 3)
-        topology = NetworkTopologyTore(2, 2, 1)
-        nt = NeuralTrainer(nn, topology, distance_euclidean)
+    print "filter elements..."
+    def filter_set(tset, elements=(0, 1, 2, 3, 4)):
+        tmp = [[], []]
+        for i in xrange(len(tset[0])):
+            if tset[1][i] in elements:
+                tmp[0].append(tset[0][i])
+                tmp[1].append(tset[1][i])
+        return tmp
 
-        ts = [[0, 0, 1], [0, 0.5, 1]] #, [1, 0, 0], [0.3, 0, 0]]
+    #train_set = filter_set(train_set)
+    #valid_set = filter_set(valid_set)
+    #test_set = filter_set(test_set)
 
-        print "init"
-        print nn._matrix
-
-        print "train"
-        for i in range(10):
-            nt.train(ts)
-        print nt.classify([[0, 0.1, 1.2], [0.2, 0.2, 0.8]])
-
-        print "result"
-        print nn._matrix
-
-    print "Load the mnist db..."
-    train_set, valid_set, test_set = mnist_load()
-
-    print "Construct the network..."
+    print "construct the network..."
     size_attr = len(mnist_get_image(train_set, 0))
-    size_network = 3 * 4
+    network_size = network_width ** 2
 
-    nn = NeuralNetwork(size_network, size_attr)
-    topology = NetworkTopologyTore(size_network, 3, 4)
-    nt = NeuralTrainer(nn, topology, distance_euclidean)
+    nn = NeuralNetwork(network_size, size_attr)
+    topology = NetworkTopologyTore(network_size, network_width, network_width)
 
     print "=== Training"
-    print "Normalize the training set..."
 
-    ts = [train_set[0][0:500], train_set[1][0:500]][0]
-    # Training
-    #dataset = [rms_normalize(mean_normalize(s)) for s in tmp_training[0]]
+    ts = train_set[0][:train_count]
+    ids = train_set[1][:train_count]
     random.shuffle(ts)
 
-    print "Start the training..."
-    nt = NeuralTrainer(nn, topology, distance_scalar)
+    print "start the training..."
+    nt = NeuralTrainer(nn, topology, distance_euclidean)
 
-    def inter_tick(network, trainer, accu=[0]):
-        if accu[0] % 100 == 1:
-            plot_network(network, "network-%s.png" % accu[0])
-        accu[0] += 1
+    def inner_gen(prefix):
+        def inner_tick(network, trainer, accu=[0]):
+            if accu[0] < 10 or accu[0] % 40 in (1, 2, 3):
+                plot.network_grid(network,
+                                  "network-%s%s.png" % (prefix, accu[0]),
+                                  (network_width, network_width))
+            accu[0] += 1
+        return inner_tick
 
-    nt.train(ts,update_fct=inter_tick)
-    print "Finished..."
+    # Train
+    # =====
+    nt.train(ts, update_fct=None)#inner_gen("test"))
+
+    print "plot the network..."
+    plot.network_grid(nn, "network.png", (network_width, network_width))
+
+    print "generate the classification table..."
+
+    ts = valid_set[0][:valid_count]
+    ids = valid_set[1][:valid_count]
+
+    print "classify the training set"
+    results = nt.classify(ts)
+    neuron_dict = [{} for i in xrange(len(nn))]
+
+    print "generate the table"
+    # [{labeli: counti, label:countj}, ...]
+    for i in xrange(len(results)):
+        neuron = results[i]
+        label = ids[i]
+        neuron_dict[neuron][label] = neuron_dict[neuron].get(label, 0) + 1
+
+    neuron_map = [-1] * len(nn)
+    print len(neuron_map)
+    for i in xrange(len(neuron_map)):
+        if len(neuron_dict[i].items()) > 0:
+            neuron_map[i] = max(neuron_dict[i].items(), key=lambda x: x[1])[0]
+
+    print "plot neuron map"
+    plot.neuron_map(topology,
+                    neuron_map,
+                    "neuron_map.png",
+                    (network_width, network_width))
+
+    print "validate the network... (TODO)"
+    print "finished..."
+
 
     print "=== Classification"
-    print "Normalize the test set..."
+    # print "normalize the test set..."
 
-    print "Start the classification..."
-    ids = train_set[1][:100]
-    ts = train_set[0][:100]
+    ids = test_set[1][:test_count]
+    ts = test_set[0][:test_count]
+
+    print "classify..."
     results = nt.classify(ts)
-    print "Finished..."
+
+    # Compute the classification rate
+    good_classif = 0.0
+    for i in xrange(len(results)):
+        if neuron_map[results[i]] == ids[i]:
+            good_classif += 1
+    good_classif /= float(len(results))
+    print "on train=%s, test=%s, good classification: %s%%" % \
+            (train_count, test_count, round(good_classif, 4)*100)
+
 
     print "=== Finally"
     # Build the dict {numberA: { neuronX: 12, neuronY: 13, ...}, ...}
     plottable = dict((i, {}) for i in xrange(10))
 
-    for i in xrange(len(ts)):
+    for i in xrange(len(ids)):
         img_id = ids[i]
         neuron = results[i]
         img_idtoneurons = plottable[img_id]
         img_idtoneurons[neuron] = img_idtoneurons.get(neuron, 0) + 1
 
     print "plot..."
-    print "=" * 10
-    print results
-    print "=" * 10
-    print plottable
-    print "=" * 10
-    plot(plottable)
+
+    print "bar"
+    plot.classif_bar(plottable, "classifications.png")
+
+    print "matrix count"
+    plot.classif_matrix(topology,
+                        plottable,
+                        "match_count.png",
+                        (network_width, network_width))
+
+
+
 
 if __name__ == "__main__":
+    #import hotshot
+    #prof = hotshot.Profile("test.prof")
+    #prof.start()
     main(sys.argv)
+    #prof.stop()
+    #prof.close()
