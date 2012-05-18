@@ -63,6 +63,7 @@ class NeuralTrainer(object):
             TODO: Adapt the neighbors
             TODO: "The conscience"
         """
+
         topo_radius = len(self._topology) * 0.5
 
         phi = 0.3
@@ -98,10 +99,6 @@ class NeuralTrainer(object):
             # Thanks to the neighbors definition,
             # winner is now a simple special case :)
             winners = self._topology.neighbors_of(winner, radius_rate(x))
-
-            #if len(winners) == 1:
-            #    break
-
             l_rate = learning_rate(x)
 
             print "[tick %s, %s winners]" % (round(x, 2), len(winners)),
