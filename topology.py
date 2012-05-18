@@ -77,7 +77,7 @@ class NetworkTopologyTore(object):
         results = set()
 
         phi = 0.2
-        k =  (1 / (phi * math.sqrt(math.pi * 2)))
+        k =  (1 / (phi * math.sqrt(math.pi * 2))) * 1/2.0
         meaning = lambda x : k * math.exp(-0.5 * ((x/phi) ** 2))
 
         # Dummy search in the whole set
