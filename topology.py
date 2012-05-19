@@ -64,7 +64,7 @@ class NetworkTopologyTore(object):
             >>> ntt.neighbors_of(0, 0) == set((0, 1.0))
             True
             >>> ntt.neighbors_of(0, 1) == \
-                    set([(0, 1.0), (1, 0.0), (3, 0.0), (2, 0.0), (6, 0.0)])
+                    set([(1, 1.0), (1, 0.0), (3, 0.0), (2, 0.0), (6, 0.0)])
             True
         """
         if (distance <= 1):
@@ -76,8 +76,8 @@ class NetworkTopologyTore(object):
 
         results = set()
 
-        phi = 0.2
-        k =  (1 / (phi * math.sqrt(math.pi * 2))) * 1/2.0
+        phi = 0.3
+        k =  (1 / (phi * math.sqrt(math.pi * 2))) * 1/1.333
         meaning = lambda x : k * math.exp(-0.5 * ((x/phi) ** 2))
 
         # Dummy search in the whole set

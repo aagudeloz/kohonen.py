@@ -72,7 +72,7 @@ class NeuralTrainer(object):
         # TODO: parametrize this
         learning_rate = lambda x : ((1 - 1.1 * x) ** 2)
         radius_rate = lambda x : k * math.exp(-0.5 * ((x/phi) ** 2))
-        radius_rate = lambda x : (1 - 1 * x) * (topo_radius + 1)
+        radius_rate = lambda x : (1 - x) * (topo_radius + 1)
 
         x = 0
         x_step = 1.0 / len(dataset)
@@ -99,6 +99,10 @@ class NeuralTrainer(object):
             # Thanks to the neighbors definition,
             # winner is now a simple special case :)
             winners = self._topology.neighbors_of(winner, radius_rate(x))
+
+            if len(winners) <= 1:
+                break
+
             l_rate = learning_rate(x)
 
             print "[tick %s, %s winners]" % (round(x, 2), len(winners)),
